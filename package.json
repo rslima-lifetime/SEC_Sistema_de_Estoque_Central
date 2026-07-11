@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.1.5",
     "@tailwindcss/vite": "^4.3.2",
     "firebase": "^12.16.0",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.1.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
