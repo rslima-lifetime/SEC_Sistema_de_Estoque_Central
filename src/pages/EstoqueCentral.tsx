@@ -9,7 +9,10 @@ import {
   FileSpreadsheet,
   Package,
   Pencil,
-  Trash2
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import type { Product } from '../services/db';
@@ -21,6 +24,28 @@ export const EstoqueCentral: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Sorting state
+  const [sortField, setSortField] = useState<'name' | 'unit' | 'initialStock' | 'entries' | 'exits' | 'finalStock'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: 'name' | 'unit' | 'initialStock' | 'entries' | 'exits' | 'finalStock') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIcon = (field: 'name' | 'unit' | 'initialStock' | 'entries' | 'exits' | 'finalStock') => {
+    if (sortField !== field) {
+      return <ArrowUpDown size={12} className="ml-1.5 text-gray-400 group-hover/header:text-gray-600 transition-colors inline-block" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp size={12} className="ml-1.5 text-amber-500 inline-block" /> 
+      : <ArrowDown size={12} className="ml-1.5 text-amber-500 inline-block" />;
+  };
 
   // Form states for new product
   const [name, setName] = useState('');
@@ -202,6 +227,20 @@ export const EstoqueCentral: React.FC = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    let aVal: any = a[sortField];
+    let bVal: any = b[sortField];
+
+    if (typeof aVal === 'string') {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   const totalSKUs = products.length;
   const totalStockQty = products.reduce((acc, p) => acc + p.finalStock, 0);
   const lowStockAlerts = products.filter(p => p.finalStock <= 50).length;
@@ -299,18 +338,66 @@ export const EstoqueCentral: React.FC = () => {
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <th className="py-4 px-6">Produto</th>
-                  <th className="py-4 px-6 text-center">Unidade de Medida</th>
-                  <th className="py-4 px-6 text-right">Estoque Inicial</th>
-                  <th className="py-4 px-6 text-right text-emerald-600">Entradas (+)</th>
-                  <th className="py-4 px-6 text-right text-rose-600">Saídas (-)</th>
-                  <th className="py-4 px-6 text-right font-bold text-gray-900 bg-amber-50 bg-opacity-30 border-l border-r border-amber-100">Estoque Final (Saldo)</th>
+                <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider select-none">
+                  <th 
+                    onClick={() => handleSort('name')}
+                    className="py-4 px-6 cursor-pointer hover:bg-gray-100/50 transition-colors group/header"
+                  >
+                    <div className="flex items-center">
+                      <span>Produto</span>
+                      {renderSortIcon('name')}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('unit')}
+                    className="py-4 px-6 text-center cursor-pointer hover:bg-gray-100/50 transition-colors group/header"
+                  >
+                    <div className="flex items-center justify-center">
+                      <span>Unidade de Medida</span>
+                      {renderSortIcon('unit')}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('initialStock')}
+                    className="py-4 px-6 text-right cursor-pointer hover:bg-gray-100/50 transition-colors group/header"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Estoque Inicial</span>
+                      {renderSortIcon('initialStock')}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('entries')}
+                    className="py-4 px-6 text-right text-emerald-600 cursor-pointer hover:bg-emerald-50/50 transition-colors group/header"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Entradas (+)</span>
+                      {renderSortIcon('entries')}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('exits')}
+                    className="py-4 px-6 text-right text-rose-600 cursor-pointer hover:bg-rose-50/50 transition-colors group/header"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Saídas (-)</span>
+                      {renderSortIcon('exits')}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('finalStock')}
+                    className="py-4 px-6 text-right font-bold text-gray-900 bg-amber-50 bg-opacity-30 border-l border-r border-amber-100 cursor-pointer hover:bg-amber-100/30 transition-colors group/header"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Estoque Final (Saldo)</span>
+                      {renderSortIcon('finalStock')}
+                    </div>
+                  </th>
                   <th className="py-4 px-6 text-center w-28">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {filteredProducts.map((p) => {
+                {sortedProducts.map((p) => {
                   const isLow = p.finalStock <= 50;
                   const isZero = p.finalStock === 0;
 
