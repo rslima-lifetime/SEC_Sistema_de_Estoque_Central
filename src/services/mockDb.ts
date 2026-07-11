@@ -2286,7 +2286,7 @@ export const mockDb = {
     return newProduct;
   },
 
-  updateProduct(id: string, name: string, unit: string): Product {
+  updateProduct(id: string, name: string, unit: string, initialStock?: number): Product {
     const products = this.getProducts();
     const idx = products.findIndex((p) => p.id === id);
     if (idx === -1) {
@@ -2294,6 +2294,10 @@ export const mockDb = {
     }
     products[idx].name = name;
     products[idx].unit = unit;
+    if (initialStock !== undefined) {
+      products[idx].initialStock = initialStock;
+      products[idx].finalStock = initialStock + (products[idx].entries || 0) - (products[idx].exits || 0);
+    }
     this.saveProducts(products);
     return products[idx];
   },

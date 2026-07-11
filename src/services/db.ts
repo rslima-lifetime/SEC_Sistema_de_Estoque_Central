@@ -176,17 +176,21 @@ export const dbService = {
     return { id: docRef.id, ...newProduct };
   },
 
-  async updateProduct(id: string, name: string, unit: string): Promise<Product> {
+  async updateProduct(id: string, name: string, unit: string, initialStock?: number): Promise<Product> {
     cacheProducts = null;
     if (useMock) {
-      return mockDb.updateProduct(id, name, unit);
+      return mockDb.updateProduct(id, name, unit, initialStock);
     }
     const productRef = doc(firestoreDb, 'products', id);
-    const updatedFields = { name, unit };
     const products = await this.getProducts();
     const existing = products.find(p => p.id === id);
     if (!existing) {
       throw new Error('Produto não encontrado');
+    }
+    const updatedFields: any = { name, unit };
+    if (initialStock !== undefined) {
+      updatedFields.initialStock = initialStock;
+      updatedFields.finalStock = initialStock + (existing.entries || 0) - (existing.exits || 0);
     }
     await setDoc(productRef, updatedFields, { merge: true });
     return { ...existing, ...updatedFields };

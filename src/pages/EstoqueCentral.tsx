@@ -57,6 +57,7 @@ export const EstoqueCentral: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState('');
   const [editUnit, setEditUnit] = useState('unidade');
+  const [editInitialStock, setEditInitialStock] = useState(0);
 
   // Modal error state (validation / duplicates)
   const [modalError, setModalError] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export const EstoqueCentral: React.FC = () => {
     setEditingProduct(p);
     setEditName(p.name);
     setEditUnit(p.unit);
+    setEditInitialStock(p.initialStock);
     setModalError(null);
     setIsEditModalOpen(true);
   };
@@ -140,11 +142,12 @@ export const EstoqueCentral: React.FC = () => {
     }
 
     try {
-      await dbService.updateProduct(editingProduct.id, editName, editUnit);
+      await dbService.updateProduct(editingProduct.id, editName, editUnit, Number(editInitialStock));
       showToast('success', 'Produto atualizado com sucesso!');
       setIsEditModalOpen(false);
       setEditingProduct(null);
       setEditName('');
+      setEditInitialStock(0);
       setModalError(null);
       fetchProducts();
     } catch (error) {
@@ -621,19 +624,31 @@ export const EstoqueCentral: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unidade de Medida</label>
-                <select
-                  value={editUnit}
-                  onChange={(e) => setEditUnit(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
-                >
-                  <option value="unidade">Unidade</option>
-                  <option value="kg">Quilo (kg)</option>
-                  <option value="litro">Litro (l)</option>
-                  <option value="caixa">Caixa</option>
-                  <option value="pacote">Pacote</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unidade de Medida</label>
+                  <select
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
+                  >
+                    <option value="unidade">Unidade</option>
+                    <option value="kg">Quilo (kg)</option>
+                    <option value="litro">Litro (l)</option>
+                    <option value="caixa">Caixa</option>
+                    <option value="pacote">Pacote</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Estoque Inicial</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editInitialStock}
+                    onChange={(e) => setEditInitialStock(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
+                  />
+                </div>
               </div>
 
               {modalError && (
