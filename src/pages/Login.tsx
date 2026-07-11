@@ -84,6 +84,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           setTimeout(() => {
             onLoginSuccess(email);
           }, 800);
+        } else {
+          setLoading(false);
+          setErrorMsg('E-mail ou senha incorretos.');
         }
       } catch (error: any) {
         console.error(error);
