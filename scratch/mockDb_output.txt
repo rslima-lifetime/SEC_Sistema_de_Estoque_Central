@@ -1,0 +1,2223 @@
+export interface Product {
+  id: string;
+  name: string;
+  unit: string;
+  initialStock: number;
+  entries: number;
+  exits: number;
+  finalStock: number;
+}
+
+export interface Movement {
+  id: string;
+  date: string;
+  type: 'Entrada' | 'Saída';
+  productId: string;
+  productName: string;
+  quantity: number;
+  isDistribution?: boolean;
+  destination?: string;
+}
+
+export interface DistributionWeek {
+  id: string;
+  destination: string;
+  items: {
+    [productId: string]: {
+      [day: string]: number;
+    };
+  };
+  confirmedAt?: string;
+  status: 'Pendente' | 'Confirmado';
+}
+
+export interface AuditRecord {
+  id: string;
+  date: string;
+  items: {
+    [productId: string]: {
+      theoretical: number;
+      physical: number;
+      difference: number;
+    };
+  };
+}
+
+const STORAGE_KEYS = {
+  PRODUCTS: 'sec_products',
+  MOVEMENTS: 'sec_movements',
+  DISTRIBUTIONS: 'sec_distributions',
+  AUDITS: 'sec_audits',
+};
+
+// Seeded products list containing all items from Vaca Burguer sheet
+export const INITIAL_PRODUCTS: Product[] = [
+  {
+    "id": "prod-1",
+    "name": "AÇÚCAR MASCAVO",
+    "unit": "unidade",
+    "initialStock": 10,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 10
+  },
+  {
+    "id": "prod-2",
+    "name": "AÇÚCAR REFINADO",
+    "unit": "unidade",
+    "initialStock": 25,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 25
+  },
+  {
+    "id": "prod-3",
+    "name": "ALHO EM PÓ",
+    "unit": "kg",
+    "initialStock": 25,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 25
+  },
+  {
+    "id": "prod-4",
+    "name": "ALHO TORRADO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-5",
+    "name": "AMIDO DE MILHO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-6",
+    "name": "ARROZ PARBOILIZADO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-7",
+    "name": "AVEIA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-8",
+    "name": "AZEITE 5L",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-9",
+    "name": "CHOCOLATE MEIO AMARGO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-10",
+    "name": "CHOCOLATE AO LEITE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-11",
+    "name": "BATATA FARM CX",
+    "unit": "kg",
+    "initialStock": 13,
+    "entries": 15,
+    "exits": 6,
+    "finalStock": 22
+  },
+  {
+    "id": "prod-12",
+    "name": "CACAU EM PÓ 100%",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-13",
+    "name": "CALDA DE MORANGO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-14",
+    "name": "CALDO DE CARNE 1KG",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-15",
+    "name": "CALDO LEGUMES 1KG",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-16",
+    "name": "CANELA EM PÓ",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-17",
+    "name": "CARNE SECA DESF 1KG",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-18",
+    "name": "CASTANHA DE CAJU",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-19",
+    "name": "CASTANHA DO PARÁ",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-20",
+    "name": "CEBOLA EM PÓ",
+    "unit": "unidade",
+    "initialStock": 10,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 10
+  },
+  {
+    "id": "prod-21",
+    "name": "CHIMICHURRI",
+    "unit": "kg",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-22",
+    "name": "COCO RALADO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-23",
+    "name": "COSTELA BOVINA DESF 1KG",
+    "unit": "unidade",
+    "initialStock": 12,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 12
+  },
+  {
+    "id": "prod-24",
+    "name": "COSTELA SUÍNA DESF 1KG",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-25",
+    "name": "CRAVO DA ÍNDIA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-26",
+    "name": "CREAM CHEESE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-27",
+    "name": "CREME DE LEITE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-28",
+    "name": "DADINHO DE TAPIOCA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-29",
+    "name": "DELICIA DE CHOCOLATE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-30",
+    "name": "DEMI GLACE 1KG",
+    "unit": "kg",
+    "initialStock": 15,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 15
+  },
+  {
+    "id": "prod-31",
+    "name": "DOCE DE LEITE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-32",
+    "name": "DOMEC 1L",
+    "unit": "litro",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-33",
+    "name": "FARINHA DE MANDIOCA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-34",
+    "name": "FARINHA DE TRIGO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-35",
+    "name": "FARINHA TEMPERADA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-36",
+    "name": "FEIJÃO DE CORDA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-37",
+    "name": "FEIJÃO PRETO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-38",
+    "name": "FUMAÇA LÍQUIDA",
+    "unit": "unidade",
+    "initialStock": 6,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 6
+  },
+  {
+    "id": "prod-39",
+    "name": "GELEIA DE PIMENTA 1.2KG",
+    "unit": "kg",
+    "initialStock": 25,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 25
+  },
+  {
+    "id": "prod-40",
+    "name": "GOMA DE TAPIOCA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-41",
+    "name": "GRÃO DE BICO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-42",
+    "name": "KETCHUP",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-43",
+    "name": "LEITE CONDENSADO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-44",
+    "name": "LEITE INTEGRAL 1L",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-45",
+    "name": "LEMON PEPPER",
+    "unit": "unidade",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-46",
+    "name": "LICOR",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-47",
+    "name": "LINGUIÇA CALABRESA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-48",
+    "name": "LINGUIÇA TOSCANA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-49",
+    "name": "LOURO EM PÓ",
+    "unit": "unidade",
+    "initialStock": 15,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 15
+  },
+  {
+    "id": "prod-50",
+    "name": "MACARRÃO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-51",
+    "name": "MAIONESE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-52",
+    "name": "MANTEIGA DE GARRAFA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-53",
+    "name": "MEL",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-54",
+    "name": "MILHO VERDE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-55",
+    "name": "MOLHO DE TOMATE 4.1KG",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-56",
+    "name": "MOLHO INGLÊS",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-57",
+    "name": "MOSTARDA HEINZ",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-58",
+    "name": "MOSTARDA EM GRÃOS",
+    "unit": "kg",
+    "initialStock": 25,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 25
+  },
+  {
+    "id": "prod-59",
+    "name": "NOZ MOSCADA",
+    "unit": "kg",
+    "initialStock": 18,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 18
+  },
+  {
+    "id": "prod-60",
+    "name": "NUTELLA 3KG",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-61",
+    "name": "ÓLEO DE ALGODÃO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-62",
+    "name": "ORÉGANO",
+    "unit": "kg",
+    "initialStock": 15,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 15
+  },
+  {
+    "id": "prod-63",
+    "name": "OVOMALTINE 750G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-64",
+    "name": "FARINHA PANKO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-65",
+    "name": "PÁPRICA DEFUMADA",
+    "unit": "unidade",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-66",
+    "name": "PÁPRICA DOCE",
+    "unit": "unidade",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-67",
+    "name": "PÁPRICA PICANTE",
+    "unit": "unidade",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-68",
+    "name": "PICLES EM CONSERVA (BALDE)",
+    "unit": "unidade",
+    "initialStock": 5,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 5
+  },
+  {
+    "id": "prod-69",
+    "name": "PICLES HEMMER 800G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-70",
+    "name": "PIMENTA CAIENA",
+    "unit": "unidade",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-71",
+    "name": "PIMENTA DO REINO",
+    "unit": "unidade",
+    "initialStock": 25,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 25
+  },
+  {
+    "id": "prod-72",
+    "name": "PUDIM",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-73",
+    "name": "R005",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-74",
+    "name": "R006",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-75",
+    "name": "R007",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-76",
+    "name": "RUBACÃO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-77",
+    "name": "SAL REFINADO",
+    "unit": "unidade",
+    "initialStock": 20,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 20
+  },
+  {
+    "id": "prod-78",
+    "name": "SAL BLEND",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-79",
+    "name": "SHOYU",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-80",
+    "name": "STROGONOF 150G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-81",
+    "name": "TAPIOCA FLOCADA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-82",
+    "name": "TOMATE PELATI 2.5KG",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-83",
+    "name": "VINAGRE",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-84",
+    "name": "VINAGRE DE MAÇÃ",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-85",
+    "name": "VINHO BRANCO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-86",
+    "name": "VINHO TINTO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-87",
+    "name": "ACÉM",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-88",
+    "name": "AIPIM",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-89",
+    "name": "BABY BEEF",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-90",
+    "name": "BACON FATIADO 1KG",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-91",
+    "name": "BACON MANTA 1KG",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-92",
+    "name": "MANTEIGA (BALDE)",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-93",
+    "name": "MARGARINA (BALDE)",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-94",
+    "name": "MOLHO BARBECUE",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-95",
+    "name": "BATATA CX",
+    "unit": "caixa",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-96",
+    "name": "BATATA PALHA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-97",
+    "name": "CARRÉ",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-98",
+    "name": "QUEIJO CHEDDAR FATIADO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-99",
+    "name": "COXA SOBRECOXA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-100",
+    "name": "FILÉ DE FRANGO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-101",
+    "name": "FILÉ DE SOBRECOXA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-102",
+    "name": "FILÉ DE PEITO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-103",
+    "name": "FRALDINHA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-104",
+    "name": "QUEIJO GOUDAN",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-105",
+    "name": "LOMBO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-106",
+    "name": "PATINHO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-107",
+    "name": "QUEIJO MONTANHÊS",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-108",
+    "name": "QUEIJO PARMESÃO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-109",
+    "name": "REQUEIJÃO CREMOSO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-110",
+    "name": "ÓLEO (BALDE)",
+    "unit": "litro",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-111",
+    "name": "ÁLCOOL EM GARRAFA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-112",
+    "name": "ÁLCOOL EM GEL",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-113",
+    "name": "ESSÊNCIA DE BAUNILHA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-114",
+    "name": "BICO DE MAÇARICO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-115",
+    "name": "BOBINA GRANDE",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-116",
+    "name": "BOBINA PEQUENA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-117",
+    "name": "BOBINA IMPRESSORA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-118",
+    "name": "CANETA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-119",
+    "name": "CANUDO (PACOTE)",
+    "unit": "pacote",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-120",
+    "name": "COLHER DESCARTÁVEL",
+    "unit": "pacote",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-121",
+    "name": "COPO DESCARTÁVEL",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-122",
+    "name": "DESENGRAXANTE 5L",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-123",
+    "name": "DESINCRUSTANTE 5L",
+    "unit": "litro",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-124",
+    "name": "DESINFETANTE HORTIFRUTI",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-125",
+    "name": "DETERGENTE CLORADO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-126",
+    "name": "ESPONJA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-127",
+    "name": "ESPONJA FIBRAÇO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-128",
+    "name": "FILME PVC",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-129",
+    "name": "GRAMPEADOR",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-130",
+    "name": "GRAMPO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-131",
+    "name": "LUVA AMARELA G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-132",
+    "name": "LUVA AMARELA M",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-133",
+    "name": "LUVA AZUL",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-134",
+    "name": "LUVA PRETA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-135",
+    "name": "LUVA RANHADURA G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-136",
+    "name": "LUVA VERDE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-137",
+    "name": "MAÇARICO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-138",
+    "name": "MARCA TEXTO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-139",
+    "name": "MÁSCARA AZUL",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-140",
+    "name": "ÓCULOS PROTETOR",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-141",
+    "name": "PÁ DE LIXO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-142",
+    "name": "PANO DE CHÃO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-143",
+    "name": "PAPEL HIGIÊNICO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-144",
+    "name": "PAPEL TOALHA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-145",
+    "name": "PERFEX G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-146",
+    "name": "PILOTO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-147",
+    "name": "RODO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-148",
+    "name": "SABÃO NEUTRO 5L",
+    "unit": "litro",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-149",
+    "name": "SABÃO PARA MÃOS",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-150",
+    "name": "SACO DE LIXO 100L",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-151",
+    "name": "SACO DE LIXO 200L",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-152",
+    "name": "SACO DE LIXO 300L",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-153",
+    "name": "TOUCA DESCARTÁVEL",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-154",
+    "name": "VASSOURA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-155",
+    "name": "BASE MILK SHAKE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-156",
+    "name": "BISCOITO MAISENA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-157",
+    "name": "BLEND CARNE 150G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-158",
+    "name": "BLEND FALAFEL 90G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-159",
+    "name": "BLEND FRANGO 90G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-160",
+    "name": "BLEND PEIXE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-161",
+    "name": "BLEND QUEIJO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-162",
+    "name": "BLEND VACOMBINHO 60G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-163",
+    "name": "BOLINHO CARNE SECA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-164",
+    "name": "BOLINHO DE COSTELA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-165",
+    "name": "BOMBOM DE CHOCOLATE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-166",
+    "name": "BOX EMBALAGEM Y029",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-167",
+    "name": "BROWNIE DO LUIZ",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-168",
+    "name": "CAFÉ 500G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-169",
+    "name": "COPO VACA AVELUDADA C/40",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-170",
+    "name": "COPO VACA MALTADA C/40",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-171",
+    "name": "COPO VACA RAIZ C/40",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-172",
+    "name": "COPO VACA VERMELHA C/40",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-173",
+    "name": "DEL VALLE LARANJA 18UN",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-174",
+    "name": "DEL VALLE UVA 18UN",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-175",
+    "name": "EMBALAGEM BATATA F012",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-176",
+    "name": "EMBALAGEM FRANCROQUITOS",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-177",
+    "name": "EMBALAGEM QUEIJO GOUDAN",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-178",
+    "name": "EMBALAGEM R005",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-179",
+    "name": "EMBALAGEM R006",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-180",
+    "name": "EMBALAGEM R007",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-181",
+    "name": "ESTIQUETA HAMB DUPLO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-182",
+    "name": "ESTIQUETA S/ALFACE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-183",
+    "name": "ETIQUETA S/CEBOLA ROLOS",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-184",
+    "name": "ETIQUETA S/MOLHO ROLOS",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-185",
+    "name": "ETIQUETA S/PICLES",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-186",
+    "name": "ETIQUETA S/QUEIJO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-187",
+    "name": "ETIQUETA S/TOMATE ROLOS",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-188",
+    "name": "ETIQUETA USAR PRIMEIRO ROLOS",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-189",
+    "name": "EXTRATO TOMATE 1,7",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-190",
+    "name": "FARELO OREO UNI",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-191",
+    "name": "FRANCROC CRUNCH",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-192",
+    "name": "FRANCROC ITALIANO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-193",
+    "name": "QUEIJO GOUDA",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-194",
+    "name": "ISCA DE PEIXE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-195",
+    "name": "LACRE BAIÃO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-196",
+    "name": "LACRE VACA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-197",
+    "name": "MARMITA C/TAMPA (100 UND)",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-198",
+    "name": "NUGGET 2,5KG",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-199",
+    "name": "NUTELLA 650G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-200",
+    "name": "PÃO BOLA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-201",
+    "name": "PÃO SMART",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-202",
+    "name": "PÃO SUPREMO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-203",
+    "name": "PEIXE VACA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-204",
+    "name": "POTE P/MOLHO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-205",
+    "name": "QUEIJO COALHO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-206",
+    "name": "QUEIJO PRATO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-207",
+    "name": "SACO DE GELO",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-208",
+    "name": "SACO VÁCUO G 500un",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-209",
+    "name": "SACO VÁCUO M 500un",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-210",
+    "name": "SACO VÁCUO P 500un",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-211",
+    "name": "SACOLA BAIÃO G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-212",
+    "name": "SACOLA BAIÃO M",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-213",
+    "name": "SACOLA VACA G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-214",
+    "name": "SACOLA VACA P",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-215",
+    "name": "SUPORTE DE COPO MILK",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-216",
+    "name": "TALHER DESCARTÁVEL",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-217",
+    "name": "TAMPA COPO MILKSHAKE",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-218",
+    "name": "TAMPA V051",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-219",
+    "name": "TEMPERO VACA 33G",
+    "unit": "kg",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-220",
+    "name": "VACOSTELA",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-221",
+    "name": "VAQUINHAS VACOMBINHO",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  },
+  {
+    "id": "prod-222",
+    "name": "SOBREMESA XODÓ",
+    "unit": "unidade",
+    "initialStock": 0,
+    "entries": 0,
+    "exits": 0,
+    "finalStock": 0
+  }
+];
+
+// Seeded movements representing entries/exits from sheet
+export const INITIAL_MOVEMENTS: Movement[] = [];
+
+// Seeded central production defaults (weekly targets)
+export const INITIAL_PRODUCTION_TARGETS: { [name: string]: number } = {
+  "AÇÚCAR MASCAVO": 20,
+  "AÇÚCAR REFINADO": 40,
+  "ALHO EM PÓ": 8,
+  "ALHO TORRADO": 12,
+  "AMIDO DE MILHO": 30,
+  "ARROZ PARBOILIZADO": 510,
+  "AVEIA": 10,
+  "AZEITE 5L": 4,
+  "BACON MANTA 1KG": 80,
+  "MANTEIGA (BALDE)": 2,
+  "MOLHO BARBECUE": 48,
+  "CHOCOLATE AO LEITE": 3,
+  "CHOCOLATE MEIO AMARGO": 6,
+  "BASE MILK SHAKE": 12,
+  "BATATA FARM CX": 145,
+  "BISCOITO MAISENA": 50,
+  "BLEND CARNE 150G": 4488,
+  "BLEND FALAFEL 90G": 108,
+  "BLEND FRANGO 90G": 216,
+  "BLEND PEIXE": 216,
+  "BLEND QUEIJO": 324,
+  "BLEND VACOMBINHO 60G": 432,
+  "BOLINHO CARNE SECA": 2000,
+  "BOLINHO DE COSTELA": 2000,
+  "BOMBOM DE CHOCOLATE": 54,
+  "BOX EMBALAGEM Y029": 140,
+  "BROWNIE DO LUIZ": 270,
+  "CACAU EM PÓ 100%": 2,
+  "CAFÉ 500G": 6,
+  "CALDA DE MORANGO": 5,
+  "CALDO DE CARNE 1KG": 20,
+  "CALDO LEGUMES 1KG": 20,
+  "CANELA EM PÓ": 2,
+  "CANUDO (PACOTE)": 32,
+  "CARNE SECA DESF 1KG": 20,
+  "CASTANHA DE CAJU": 2,
+  "CASTANHA DO PARÁ": 2,
+  "CEBOLA EM PÓ": 10,
+  "QUEIJO CHEDDAR FATIADO": 2592,
+  "CHIMICHURRI": 10,
+  "COCO RALADO": 20,
+  "COPO VACA AVELUDADA C/40": 54,
+  "COPO VACA MALTADA C/40": 54,
+  "COPO VACA RAIZ C/40": 54,
+  "COPO VACA VERMELHA C/40": 54,
+  "COSTELA BOVINA DESF 1KG": 160,
+  "COSTELA SUÍNA DESF 1KG": 60,
+  "CRAVO DA ÍNDIA": 2,
+  "CREAM CHEESE": 32,
+  "CREME DE LEITE": 120,
+  "DADINHO DE TAPIOCA": 432,
+  "DEL VALLE LARANJA 18UN": 6,
+  "DEL VALLE UVA 18UN": 6,
+  "DELICIA DE CHOCOLATE": 324,
+  "DEMI GLACE 1KG": 10,
+  "DOCE DE LEITE": 40,
+  "DOMEC 1L": 40,
+  "EMBALAGEM BATATA F012": 5400,
+  "EMBALAGEM FRANCROQUITOS": 65,
+  "EMBALAGEM QUEIJO GOUDAN": 130,
+  "EMBALAGEM R005": 4400,
+  "EMBALAGEM R006": 4400,
+  "EMBALAGEM R007": 4400,
+  "ESTIQUETA HAMB DUPLO": 16,
+  "ESTIQUETA S/ALFACE": 16,
+  "ETIQUETA S/CEBOLA ROLOS": 16,
+  "ETIQUETA S/MOLHO ROLOS": 16,
+  "ETIQUETA S/PICLES": 16,
+  "ETIQUETA S/QUEIJO": 16,
+  "ETIQUETA S/TOMATE ROLOS": 16,
+  "ETIQUETA USAR PRIMEIRO ROLOS": 16,
+  "EXTRATO TOMATE 1,7": 40,
+  "FARELO OREO UNI": 216,
+  "FARINHA DE MANDIOCA": 20,
+  "FARINHA TEMPERADA": 60,
+  "FARINHA DE TRIGO": 60,
+  "FEIJÃO DE CORDA": 200,
+  "FEIJÃO PRETO": 120,
+  "FRANCROC CRUNCH": 324,
+  "FRANCROC ITALIANO": 324,
+  "FUMAÇA LÍQUIDA": 4,
+  "GELEIA DE PIMENTA 1.2KG": 20,
+  "GOMA DE TAPIOCA": 60,
+  "QUEIJO GOUDA": 1728,
+  "GRAMPO": 32,
+  "GRÃO DE BICO": 40,
+  "ISCA DE PEIXE": 40,
+  "KETCHUP": 64,
+  "LACRE BAIÃO": 12,
+  "LACRE VACA": 12,
+  "LEITE CONDENSADO": 160,
+  "LEITE INTEGRAL 1L": 40,
+  "LEMON PEPPER": 10,
+  "LICOR": 32,
+  "LINGUIÇA CALABRESA": 100,
+  "LINGUIÇA TOSCANA": 30,
+  "LOMBO": 120,
+  "LOURO EM PÓ": 2,
+  "LUVA PRETA": 48,
+  "MACARRÃO": 200,
+  "MAIONESE": 80,
+  "MANTEIGA DE GARRAFA": 24,
+  "MARMITA C/TAMPA (100 UND)": 12,
+  "MÁSCARA AZUL": 8,
+  "MEL": 20,
+  "MILHO VERDE": 80,
+  "MOLHO DE TOMATE 4.1KG": 80,
+  "MOLHO INGLÊS": 40,
+  "MOSTARDA EM GRÃOS": 6,
+  "MOSTARDA HEINZ": 20,
+  "NOZ MOSCADA": 2,
+  "NUGGET 2,5KG": 65,
+  "NUTELLA 3KG": 20,
+  "NUTELLA 650G": 20,
+  "ÓLEO DE ALGODÃO": 120,
+  "ORÉGANO": 4,
+  "OVOMALTINE 750G": 10,
+  "FARINHA PANKO": 120,
+  "PÃO BOLA": 356,
+  "PÃO SMART": 1426,
+  "PÃO SUPREMO": 1782,
+  "PAPEL TOALHA": 8,
+  "PÁPRICA DEFUMADA": 10,
+  "PÁPRICA DOCE": 10,
+  "PÁPRICA PICANTE": 10,
+  "PEIXE VACA": 216,
+  "PICLES EM CONSERVA (BALDE)": 24,
+  "PICLES HEMMER 800G": 60,
+  "PIMENTA CAIENA": 2,
+  "PIMENTA DO REINO": 10,
+  "POTE P/MOLHO": 4400,
+  "PUDIM": 216,
+  "QUEIJO COALHO": 432,
+  "QUEIJO MONTANHÊS": 20,
+  "QUEIJO PRATO": 2592,
+  "REQUEIJÃO CREMOSO": 216,
+  "RUBACÃO": 40,
+  "SACO DE GELO": 200,
+  "SACO VÁCUO G 500un": 3,
+  "SACO VÁCUO M 500un": 3,
+  "SACO VÁCUO P 500un": 3,
+  "SACOLA BAIÃO G": 3,
+  "SACOLA BAIÃO M": 3,
+  "SACOLA VACA G": 11,
+  "SACOLA VACA P": 11,
+  "SAL BLEND": 20,
+  "SAL REFINADO": 20,
+  "SHOYU": 40,
+  "STROGONOF 150G": 216,
+  "SUPORTE DE COPO MILK": 108,
+  "TALHER DESCARTÁVEL": 64,
+  "TAMPA COPO MILKSHAKE": 216,
+  "TAMPA V051": 4400,
+  "TAPIOCA FLOCADA": 20,
+  "TEMPERO VACA 33G": 200,
+  "TOMATE PELATI 2.5KG": 20,
+  "VACOSTELA": 432,
+  "VAQUINHAS VACOMBINHO": 432,
+  "VINAGRE": 40,
+  "VINAGRE DE MAÇÃ": 40,
+  "VINHO BRANCO": 24,
+  "VINHO TINTO": 24,
+  "SOBREMESA XODÓ": 324
+};
