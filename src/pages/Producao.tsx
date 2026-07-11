@@ -1,12 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
 import type { Product } from '../services/db';
-import { Search, Printer, Package, CheckCircle2 } from 'lucide-react';
+import { Search, Printer, Package, CheckCircle2, Pencil, AlertCircle } from 'lucide-react';
 
 export const Producao: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editTarget, setEditTarget] = useState(0);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const handleEditClick = (p: Product) => {
+    setEditingProduct(p);
+    setEditTarget(p.productionTarget || 0);
+    setModalError(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditTargetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setModalError(null);
+    if (!editingProduct) return;
+
+    try {
+      await dbService.updateProductionTarget(editingProduct.id, Number(editTarget));
+      setIsEditModalOpen(false);
+      setEditingProduct(null);
+      setEditTarget(0);
+      fetchProductionProducts();
+    } catch (error: any) {
+      console.error('Error updating production target:', error);
+      setModalError(error.message || 'Erro ao atualizar meta de produção.');
+    }
+  };
 
   useEffect(() => {
     fetchProductionProducts();
@@ -105,6 +133,7 @@ export const Producao: React.FC = () => {
                   <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Unidade</th>
                   <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Meta Semanal Central</th>
                   <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-center print:hidden">Status Sugerido</th>
+                  <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-center print:hidden w-24">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -132,6 +161,15 @@ export const Producao: React.FC = () => {
                           <span>Separar / Produzir</span>
                         </span>
                       </td>
+                      <td className="py-4 px-6 text-center whitespace-nowrap print:hidden">
+                        <button
+                          onClick={() => handleEditClick(p)}
+                          className="p-1.5 hover:bg-gray-100 text-gray-500 hover:text-gray-900 rounded-lg transition-colors inline-flex items-center"
+                          title="Ajustar Meta Semanal"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -140,6 +178,66 @@ export const Producao: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal: Ajustar Meta Semanal */}
+      {isEditModalOpen && editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <h4 className="font-bold text-gray-900">Ajustar Meta Semanal</h4>
+              <button 
+                onClick={() => { setIsEditModalOpen(false); setEditingProduct(null); setModalError(null); }}
+                className="text-gray-400 hover:text-gray-600 text-lg font-medium"
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleEditTargetSubmit} className="p-6 space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Item</label>
+                <div className="text-sm font-semibold text-gray-800 bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-100">
+                  {editingProduct.name}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Meta Semanal ({editingProduct.unit})</label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={editTarget}
+                  onChange={(e) => setEditTarget(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
+                />
+              </div>
+
+              {modalError && (
+                <div className="flex items-center space-x-2 text-rose-600 bg-rose-50 border border-rose-100 p-3 rounded-xl text-xs">
+                  <AlertCircle size={14} className="flex-shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              <div className="pt-4 flex items-center justify-end space-x-3 border-t border-gray-100 mt-6">
+                <button
+                  type="button"
+                  onClick={() => { setIsEditModalOpen(false); setEditingProduct(null); setModalError(null); }}
+                  className="px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-accent-yellow text-gray-900 rounded-xl text-sm font-bold shadow-sm hover:brightness-95 transition-all"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
