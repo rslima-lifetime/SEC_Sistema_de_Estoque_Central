@@ -79,13 +79,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
     <div className="flex h-screen bg-[#f8f9fa] text-[#212529] overflow-hidden">
       {/* Sidebar */}
       <aside 
-        className={`bg-white border-r border-gray-200 flex flex-col justify-between transition-all duration-300 z-30 ${
+        className={`bg-white border-r border-gray-200 flex flex-col justify-between transition-all duration-300 z-30 relative ${
           isSidebarOpen ? 'w-64' : 'w-20'
         }`}
       >
+        {/* Floating border toggle button */}
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute -right-3 top-8 w-6 h-6 bg-white border border-gray-200 text-gray-400 hover:text-gray-900 rounded-full flex items-center justify-center shadow-sm z-40 transition-all hover:bg-gray-50 active:scale-95 cursor-pointer"
+          title={isSidebarOpen ? "Recolher Menu" : "Expandir Menu"}
+        >
+          {isSidebarOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+        </button>
+
         {/* Sidebar Header & Brand */}
         <div>
-          <div className="h-20 flex items-center px-4 border-b border-gray-100 justify-between">
+          <div className={`h-20 flex items-center px-4 border-b border-gray-100 ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
             <div className="flex items-center space-x-3 overflow-hidden">
               <img 
                 src="/vaca_logo.png" 
@@ -99,16 +108,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 </div>
               )}
             </div>
-            
-            {isSidebarOpen && (
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                title="Recolher Menu"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            )}
           </div>
 
           {/* Navigation Links */}
@@ -165,13 +164,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 title="Sair do Painel"
               >
                 <LogOut size={16} />
-              </button>
-              <button 
-                onClick={() => setIsSidebarOpen(true)}
-                className="w-full flex justify-center p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                title="Expandir Menu"
-              >
-                <ChevronRight size={18} />
               </button>
             </div>
           ) : (
