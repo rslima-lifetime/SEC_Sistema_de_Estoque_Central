@@ -18,7 +18,7 @@ export const Auditoria: React.FC = () => {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // audit inputs state: { [productId]: physicalQuantity }
-  const [physicalCounts, setPhysicalCounts] = useState<{ [productId: string]: number }>({});
+  const [physicalCounts, setPhysicalCounts] = useState<{ [productId: string]: string }>({});
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -38,7 +38,7 @@ export const Auditoria: React.FC = () => {
       // Initialize inputs with theoretical counts
       const counts: typeof physicalCounts = {};
       prods.forEach(p => {
-        counts[p.id] = p.finalStock;
+        counts[p.id] = p.finalStock.toString();
       });
       setPhysicalCounts(counts);
     } catch (err) {
@@ -53,11 +53,20 @@ export const Auditoria: React.FC = () => {
   }, []);
 
   const handleCountChange = (productId: string, val: string) => {
-    const num = Math.max(0, parseInt(val, 10) || 0);
-    setPhysicalCounts(prev => ({
-      ...prev,
-      [productId]: num
-    }));
+    if (val === '') {
+      setPhysicalCounts(prev => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+      return;
+    }
+    if (/^\d*([.,]\d*)?$/.test(val)) {
+      setPhysicalCounts(prev => ({
+        ...prev,
+        [productId]: val
+      }));
+    }
   };
 
   const handleSaveAudit = async () => {
@@ -67,7 +76,8 @@ export const Auditoria: React.FC = () => {
     let absoluteLossCount = 0;
 
     products.forEach(p => {
-      const physical = physicalCounts[p.id] !== undefined ? physicalCounts[p.id] : p.finalStock;
+      const physicalVal = physicalCounts[p.id];
+      const physical = physicalVal !== undefined ? (parseFloat(physicalVal.replace(',', '.')) || 0) : p.finalStock;
       const diff = physical - p.finalStock;
 
       payload[p.id] = {
@@ -103,7 +113,8 @@ export const Auditoria: React.FC = () => {
 
   // Helper variables for statistics
   const itemsWithLoss = products.filter(p => {
-    const physical = physicalCounts[p.id] !== undefined ? physicalCounts[p.id] : p.finalStock;
+    const physicalVal = physicalCounts[p.id];
+    const physical = physicalVal !== undefined ? (parseFloat(physicalVal.replace(',', '.')) || 0) : p.finalStock;
     return physical < p.finalStock;
   }).length;
 
@@ -164,7 +175,8 @@ export const Auditoria: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {products.map((p) => {
-                    const physical = physicalCounts[p.id] !== undefined ? physicalCounts[p.id] : p.finalStock;
+                    const physicalVal = physicalCounts[p.id];
+                    const physical = physicalVal !== undefined ? (parseFloat(physicalVal.replace(',', '.')) || 0) : p.finalStock;
                     const diff = physical - p.finalStock;
                     const isNegative = diff < 0;
                     const isPositive = diff > 0;
@@ -187,8 +199,8 @@ export const Auditoria: React.FC = () => {
 
                         <td className="py-3 px-4 text-center">
                           <input
-                            type="number"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={physicalCounts[p.id] === undefined ? '' : physicalCounts[p.id]}
                             onChange={(e) => handleCountChange(p.id, e.target.value)}
                             className={`w-28 px-3 py-1.5 text-center border rounded-xl text-sm font-semibold transition-all focus:outline-none focus:ring-2 ${

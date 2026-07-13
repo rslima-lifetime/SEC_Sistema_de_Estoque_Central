@@ -9,12 +9,12 @@ export const Producao: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editTarget, setEditTarget] = useState(0);
+  const [editTarget, setEditTarget] = useState<string>('0');
   const [modalError, setModalError] = useState<string | null>(null);
 
   const handleEditClick = (p: Product) => {
     setEditingProduct(p);
-    setEditTarget(p.productionTarget || 0);
+    setEditTarget((p.productionTarget || 0).toString());
     setModalError(null);
     setIsEditModalOpen(true);
   };
@@ -25,10 +25,10 @@ export const Producao: React.FC = () => {
     if (!editingProduct) return;
 
     try {
-      await dbService.updateProductionTarget(editingProduct.id, Number(editTarget));
+      await dbService.updateProductionTarget(editingProduct.id, Number(editTarget.replace(',', '.')) || 0);
       setIsEditModalOpen(false);
       setEditingProduct(null);
-      setEditTarget(0);
+      setEditTarget('0');
       fetchProductionProducts();
     } catch (error: any) {
       console.error('Error updating production target:', error);
@@ -203,11 +203,16 @@ export const Producao: React.FC = () => {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Meta Semanal ({editingProduct.unit})</label>
                 <input
-                  type="number"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   required
                   value={editTarget}
-                  onChange={(e) => setEditTarget(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*([.,]\d*)?$/.test(val)) {
+                      setEditTarget(val);
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
                 />
               </div>

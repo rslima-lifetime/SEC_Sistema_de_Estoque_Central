@@ -21,7 +21,7 @@ export const Movimentacoes: React.FC = () => {
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [type, setType] = useState<'Entrada' | 'Saída'>('Entrada');
   const [productId, setProductId] = useState('');
-  const [quantity, setQuantity] = useState<number | ''>('');
+  const [quantity, setQuantity] = useState<string>('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -59,7 +59,8 @@ export const Movimentacoes: React.FC = () => {
       showToast('error', 'Por favor, selecione um produto.');
       return;
     }
-    if (!quantity || Number(quantity) <= 0) {
+    const parsedQty = parseFloat(quantity.replace(',', '.')) || 0;
+    if (parsedQty <= 0) {
       showToast('error', 'A quantidade deve ser maior que zero.');
       return;
     }
@@ -67,14 +68,14 @@ export const Movimentacoes: React.FC = () => {
     // Verify stock availability on exit
     if (type === 'Saída') {
       const selectedProd = products.find(p => p.id === productId);
-      if (selectedProd && selectedProd.finalStock < Number(quantity)) {
+      if (selectedProd && selectedProd.finalStock < parsedQty) {
         showToast('error', `Estoque insuficiente! Saldo atual do item: ${selectedProd.finalStock} ${selectedProd.unit}(s).`);
         return;
       }
     }
 
     try {
-      await dbService.addMovement(productId, type, Number(quantity), date);
+      await dbService.addMovement(productId, type, parsedQty, date);
       showToast('success', 'Movimentação registrada com sucesso!');
       setQuantity('');
       fetchData(); // refresh list and updated stock levels
@@ -182,12 +183,17 @@ export const Movimentacoes: React.FC = () => {
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quantidade</label>
               <div className="relative">
                 <input
-                  type="number"
-                  min="1"
+                  type="text"
+                  inputMode="decimal"
                   required
                   placeholder="Digite o volume"
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*([.,]\d*)?$/.test(val)) {
+                      setQuantity(val);
+                    }
+                  }}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
                 />
               </div>

@@ -43,7 +43,7 @@ export const Distribuicao: React.FC = () => {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // local grid state: { [productId]: { [day]: quantity } }
-  const [gridData, setGridData] = useState<{ [prodId: string]: { [day: string]: number } }>({});
+  const [gridData, setGridData] = useState<{ [prodId: string]: { [day: string]: string } }>({});
   const [currentDist, setCurrentDist] = useState<DistributionWeek | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -80,7 +80,8 @@ export const Distribuicao: React.FC = () => {
       prods.forEach(p => {
         initialGrid[p.id] = {};
         DAYS_OF_WEEK.forEach(day => {
-          initialGrid[p.id][day] = match?.items[p.id]?.[day] || 0;
+          const val = match?.items[p.id]?.[day];
+          initialGrid[p.id][day] = val !== undefined && val !== 0 ? val.toString() : '';
         });
       });
       setGridData(initialGrid);
@@ -98,19 +99,20 @@ export const Distribuicao: React.FC = () => {
   const handleCellChange = (productId: string, day: string, value: string) => {
     if (currentDist?.status === 'Confirmado') return; // Read-only
 
-    const qty = Math.max(0, parseInt(value, 10) || 0);
-    setGridData(prev => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        [day]: qty
-      }
-    }));
+    if (value === '' || /^\d*([.,]\d*)?$/.test(value)) {
+      setGridData(prev => ({
+        ...prev,
+        [productId]: {
+          ...prev[productId],
+          [day]: value
+        }
+      }));
+    }
   };
 
   const handleSaveDraft = async () => {
     try {
-      await dbService.saveDistribution(activeDest, gridData);
+      await dbService.saveDistribution(activeDest, getParsedGridData());
       showToast('success', 'Rascunho da grade semanal salvo com sucesso!');
       loadData();
     } catch (error) {
@@ -122,8 +124,9 @@ export const Distribuicao: React.FC = () => {
     // 1. Check if there are quantities to send
     let totalQty = 0;
     const errors: string[] = [];
+    const parsedGrid = getParsedGridData();
 
-    Object.entries(gridData).forEach(([productId, dayData]) => {
+    Object.entries(parsedGrid).forEach(([productId, dayData]) => {
       const itemSum = Object.values(dayData).reduce((sum, val) => sum + val, 0);
       totalQty += itemSum;
 
@@ -177,7 +180,7 @@ export const Distribuicao: React.FC = () => {
 
     if (action === 'confirm_shipment') {
       try {
-        const saved = await dbService.saveDistribution(activeDest, gridData);
+        const saved = await dbService.saveDistribution(activeDest, getParsedGridData());
         await dbService.confirmDistribution(saved.id);
         showToast('success', 'Remessa confirmada! Baixa automática realizada no Estoque Central.');
         loadData();
@@ -204,11 +207,23 @@ export const Distribuicao: React.FC = () => {
     }
   };
 
+  // Helper to convert grid data strings to numbers
+  const getParsedGridData = (): { [productId: string]: { [day: string]: number } } => {
+    const parsed: { [productId: string]: { [day: string]: number } } = {};
+    Object.entries(gridData).forEach(([productId, dayData]) => {
+      parsed[productId] = {};
+      Object.entries(dayData).forEach(([day, val]) => {
+        parsed[productId][day] = val === '' ? 0 : (parseFloat(val.replace(',', '.')) || 0);
+      });
+    });
+    return parsed;
+  };
+
   // Get row total
   const getProductTotal = (productId: string) => {
     const days = gridData[productId];
     if (!days) return 0;
-    return Object.values(days).reduce((sum, val) => sum + val, 0);
+    return Object.values(days).reduce((sum, val) => sum + (val === '' ? 0 : (parseFloat(val.replace(',', '.')) || 0)), 0);
   };
 
   return (
@@ -361,10 +376,10 @@ export const Distribuicao: React.FC = () => {
                       {DAYS_OF_WEEK.map(day => (
                         <td key={day} className="py-3 px-2 text-center">
                           <input
-                            type="number"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             disabled={currentDist?.status === 'Confirmado'}
-                            value={gridData[p.id]?.[day] === 0 ? '' : gridData[p.id]?.[day] || ''}
+                            value={gridData[p.id]?.[day] ?? ''}
                             onChange={(e) => handleCellChange(p.id, day, e.target.value)}
                             placeholder="0"
                             className={`w-16 px-1.5 py-1 text-center border rounded-lg text-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent ${

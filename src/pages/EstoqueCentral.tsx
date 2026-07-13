@@ -50,14 +50,14 @@ export const EstoqueCentral: React.FC = () => {
   // Form states for new product
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('unidade');
-  const [initialStock, setInitialStock] = useState(0);
+  const [initialStock, setInitialStock] = useState('0');
 
   // Form states for editing product
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState('');
   const [editUnit, setEditUnit] = useState('unidade');
-  const [editInitialStock, setEditInitialStock] = useState(0);
+  const [editInitialStock, setEditInitialStock] = useState('0');
 
   // Modal error state (validation / duplicates)
   const [modalError, setModalError] = useState<string | null>(null);
@@ -104,12 +104,12 @@ export const EstoqueCentral: React.FC = () => {
     }
 
     try {
-      await dbService.addProduct(name, unit, Number(initialStock));
+      await dbService.addProduct(name, unit, Number(initialStock.replace(',', '.')) || 0);
       showToast('success', 'Produto cadastrado com sucesso!');
       setIsModalOpen(false);
       setName('');
       setUnit('unidade');
-      setInitialStock(0);
+      setInitialStock('0');
       setModalError(null);
       fetchProducts();
     } catch (error) {
@@ -121,7 +121,7 @@ export const EstoqueCentral: React.FC = () => {
     setEditingProduct(p);
     setEditName(p.name);
     setEditUnit(p.unit);
-    setEditInitialStock(p.initialStock);
+    setEditInitialStock(p.initialStock.toString());
     setModalError(null);
     setIsEditModalOpen(true);
   };
@@ -142,12 +142,12 @@ export const EstoqueCentral: React.FC = () => {
     }
 
     try {
-      await dbService.updateProduct(editingProduct.id, editName, editUnit, Number(editInitialStock));
+      await dbService.updateProduct(editingProduct.id, editName, editUnit, Number(editInitialStock.replace(',', '.')) || 0);
       showToast('success', 'Produto atualizado com sucesso!');
       setIsEditModalOpen(false);
       setEditingProduct(null);
       setEditName('');
-      setEditInitialStock(0);
+      setEditInitialStock('0');
       setModalError(null);
       fetchProducts();
     } catch (error) {
@@ -196,7 +196,7 @@ export const EstoqueCentral: React.FC = () => {
           if (columns.length >= 3) {
             const pName = columns[0];
             const pUnit = columns[1];
-            const pStock = parseInt(columns[2], 10);
+            const pStock = parseFloat(columns[2].replace(',', '.')) || 0;
             
             if (pName && pUnit && !isNaN(pStock)) {
               parsedItems.push({
@@ -508,10 +508,15 @@ export const EstoqueCentral: React.FC = () => {
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Estoque Inicial</label>
                   <input
-                    type="number"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={initialStock}
-                    onChange={(e) => setInitialStock(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*([.,]\d*)?$/.test(val)) {
+                        setInitialStock(val);
+                      }
+                    }}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
                   />
                 </div>
@@ -642,10 +647,15 @@ export const EstoqueCentral: React.FC = () => {
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Estoque Inicial</label>
                   <input
-                    type="number"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={editInitialStock}
-                    onChange={(e) => setEditInitialStock(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*([.,]\d*)?$/.test(val)) {
+                        setEditInitialStock(val);
+                      }
+                    }}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
                   />
                 </div>
