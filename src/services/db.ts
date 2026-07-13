@@ -220,6 +220,7 @@ export const dbService = {
     }
     const productRef = doc(firestoreDb, 'products', id);
     await deleteDoc(productRef);
+    cacheProducts = null;
   },
 
   async importProductsFromCSV(importedItems: { name: string; unit: string; initialStock: number }[]): Promise<Product[]> {
@@ -445,6 +446,7 @@ export const dbService = {
 
     const { id, ...dataToSave } = updated;
     await setDoc(distRef, dataToSave);
+    cacheDistributions = null;
     return updated;
   },
 
@@ -489,6 +491,7 @@ export const dbService = {
     }
     
     await setDoc(distRef, { status: 'Pendente', confirmedAt: null }, { merge: true });
+    cacheDistributions = null;
   },
 
   async resetAllDistributions(): Promise<void> {
@@ -501,6 +504,7 @@ export const dbService = {
     for (const docSnap of snapshot.docs) {
       await deleteDoc(doc(firestoreDb, 'distributions', docSnap.id));
     }
+    cacheDistributions = null;
   },
 
   // Audits
