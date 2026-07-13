@@ -6,7 +6,9 @@ import {
   CheckCircle2, 
   AlertCircle,
   Truck,
-  Lock
+  Lock,
+  RotateCcw,
+  Unlock
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import type { Product, DistributionWeek } from '../services/db';
@@ -43,6 +45,17 @@ export const Distribuicao: React.FC = () => {
   // local grid state: { [productId]: { [day]: quantity } }
   const [gridData, setGridData] = useState<{ [prodId: string]: { [day: string]: number } }>({});
   const [currentDist, setCurrentDist] = useState<DistributionWeek | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    actionType: 'confirm_shipment' | 'reopen_shipment' | 'reset_week';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    actionType: 'confirm_shipment'
+  });
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -131,18 +144,63 @@ export const Distribuicao: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`Confirmar o envio de ${totalQty} itens para ${activeDest}? Esta ação dará baixa imediata do estoque central.`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirmar Envio de Remessa',
+      message: `Deseja confirmar o envio de ${totalQty} itens para ${activeDest}? Esta ação dará baixa imediata no Estoque Central.`,
+      actionType: 'confirm_shipment'
+    });
+  };
 
-    try {
-      // Save draft first to ensure DB has latest
-      const saved = await dbService.saveDistribution(activeDest, gridData);
-      await dbService.confirmDistribution(saved.id);
-      showToast('success', 'Remessa confirmada! Baixa automática realizada no Estoque Central.');
-      loadData();
-    } catch (error) {
-      showToast('error', 'Falha ao confirmar envio.');
+  const handleReopenShipment = async () => {
+    if (!currentDist) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reabrir Grade de Envio',
+      message: `Deseja reabrir a grade de envio para ${activeDest}? Os saldos retirados do Estoque Central serão devolvidos para a Central.`,
+      actionType: 'reopen_shipment'
+    });
+  };
+
+  const handleResetAllWeeks = async () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Iniciar Nova Semana',
+      message: 'Tem certeza que deseja iniciar uma NOVA SEMANA? Isto irá limpar todas as grades de distribuição de todas as lojas para preenchimento do zero.',
+      actionType: 'reset_week'
+    });
+  };
+
+  const executeModalAction = async () => {
+    const action = confirmModal.actionType;
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
+    if (action === 'confirm_shipment') {
+      try {
+        const saved = await dbService.saveDistribution(activeDest, gridData);
+        await dbService.confirmDistribution(saved.id);
+        showToast('success', 'Remessa confirmada! Baixa automática realizada no Estoque Central.');
+        loadData();
+      } catch (error) {
+        showToast('error', 'Falha ao confirmar envio.');
+      }
+    } else if (action === 'reopen_shipment') {
+      if (!currentDist) return;
+      try {
+        await dbService.reopenDistribution(currentDist.id);
+        showToast('success', 'Grade reaberta com sucesso! Saldo devolvido ao Estoque Central.');
+        loadData();
+      } catch (error) {
+        showToast('error', 'Falha ao reabrir grade.');
+      }
+    } else if (action === 'reset_week') {
+      try {
+        await dbService.resetAllDistributions();
+        showToast('success', 'Nova semana iniciada! Todas as grades de envio foram resetadas.');
+        loadData();
+      } catch (error) {
+        showToast('error', 'Erro ao resetar semana.');
+      }
     }
   };
 
@@ -166,6 +224,25 @@ export const Distribuicao: React.FC = () => {
           <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100 pb-5">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Grade de Distribuição</h2>
+          <p className="text-sm text-gray-500 mt-1">Planejamento e controle de remessas diárias para lojas e produção.</p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleResetAllWeeks}
+            className="flex items-center space-x-2 px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl text-sm font-semibold shadow-sm transition-all"
+            title="Iniciar Nova Semana (Limpa todas as grades)"
+          >
+            <RotateCcw size={16} />
+            <span>Iniciar Nova Semana</span>
+          </button>
+        </div>
+      </div>
 
       {/* Seletor de Destinos (Tabs) */}
       <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-sm flex flex-wrap gap-2 overflow-x-auto">
@@ -210,9 +287,19 @@ export const Distribuicao: React.FC = () => {
 
           <div className="flex items-center space-x-3">
             {currentDist?.status === 'Confirmado' ? (
-              <div className="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-xs font-semibold">
-                <Lock size={14} className="text-emerald-500" />
-                <span>Envio Confirmado: {new Date(currentDist.confirmedAt || '').toLocaleDateString('pt-BR')}</span>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-xs font-semibold">
+                  <Lock size={14} className="text-emerald-500" />
+                  <span>Envio Confirmado: {new Date(currentDist.confirmedAt || '').toLocaleDateString('pt-BR')}</span>
+                </div>
+                <button
+                  onClick={handleReopenShipment}
+                  className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 text-gray-600 rounded-xl text-xs font-semibold transition-all shadow-sm"
+                  title="Reabrir Grade de Envio"
+                >
+                  <Unlock size={13} />
+                  <span>Reabrir Grade</span>
+                </button>
               </div>
             ) : (
               <>
@@ -306,6 +393,50 @@ export const Distribuicao: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Modal: Confirmação Personalizada */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <h4 className="font-bold text-gray-950">{confirmModal.title}</h4>
+              <button 
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="text-gray-400 hover:text-gray-600 text-lg font-medium"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-left">
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {confirmModal.message}
+              </p>
+
+              <div className="pt-4 flex items-center justify-end space-x-3 border-t border-gray-100 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={executeModalAction}
+                  className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm hover:brightness-95 transition-all ${
+                    confirmModal.actionType === 'reset_week'
+                      ? 'bg-rose-600 text-white hover:bg-rose-750'
+                      : confirmModal.actionType === 'reopen_shipment'
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                        : 'bg-accent-yellow text-gray-900'
+                  }`}
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
