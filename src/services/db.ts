@@ -196,6 +196,15 @@ export const dbService = {
     return { ...existing, ...updatedFields };
   },
 
+  async updateProductionTarget(id: string, target: number): Promise<void> {
+    cacheProducts = null;
+    if (useMock) {
+      return mockDb.updateProductionTarget(id, target);
+    }
+    const productRef = doc(firestoreDb, 'products', id);
+    await setDoc(productRef, { productionTarget: target }, { merge: true });
+  },
+
   async deleteProduct(id: string): Promise<void> {
     cacheProducts = null;
     if (useMock) {
@@ -437,6 +446,61 @@ export const dbService = {
     const { id, ...dataToSave } = updated;
     await setDoc(distRef, dataToSave);
     return updated;
+  },
+
+  async reopenDistribution(distId: string): Promise<void> {
+    cacheProducts = null;
+    cacheMovements = null;
+    cacheDistributions = null;
+    if (useMock) {
+      return mockDb.reopenDistribution(distId);
+    }
+    
+    const distRef = doc(firestoreDb, 'distributions', distId);
+    const distributions = await this.getDistributions();
+    const target = distributions.find(d => d.id === distId);
+    if (!target || target.status !== 'Confirmado') {
+      throw new Error('Distribuição não encontrada ou não está confirmada!');
+    }
+    
+    const products = await this.getProducts();
+    for (const [productId, dayData] of Object.entries(target.items)) {
+      const totalQty = Object.values(dayData).reduce((sum, val) => sum + (val || 0), 0);
+      if (totalQty > 0) {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          const productRef = doc(firestoreDb, 'products', productId);
+          const newExits = Math.max(0, (product.exits || 0) - totalQty);
+          const newFinalStock = (product.initialStock || 0) + (product.entries || 0) - newExits;
+          await setDoc(productRef, { exits: newExits, finalStock: newFinalStock }, { merge: true });
+        }
+      }
+    }
+    
+    const movementsQuery = query(
+      collection(firestoreDb, 'movements')
+    );
+    const movementsSnapshot = await getDocs(movementsQuery);
+    for (const movDoc of movementsSnapshot.docs) {
+      const movData = movDoc.data();
+      if (movData.isDistribution && movData.destination === target.destination) {
+        await deleteDoc(doc(firestoreDb, 'movements', movDoc.id));
+      }
+    }
+    
+    await setDoc(distRef, { status: 'Pendente', confirmedAt: null }, { merge: true });
+  },
+
+  async resetAllDistributions(): Promise<void> {
+    cacheDistributions = null;
+    if (useMock) {
+      return mockDb.resetAllDistributions();
+    }
+    const q = query(collection(firestoreDb, 'distributions'));
+    const snapshot = await getDocs(q);
+    for (const docSnap of snapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'distributions', docSnap.id));
+    }
   },
 
   // Audits

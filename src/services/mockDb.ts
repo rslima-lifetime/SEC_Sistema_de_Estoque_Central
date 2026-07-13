@@ -2302,6 +2302,16 @@ export const mockDb = {
     return products[idx];
   },
 
+  updateProductionTarget(id: string, target: number): void {
+    const products = this.getProducts();
+    const idx = products.findIndex((p) => p.id === id);
+    if (idx === -1) {
+      throw new Error('Produto não encontrado');
+    }
+    products[idx].productionTarget = target;
+    this.saveProducts(products);
+  },
+
   deleteProduct(id: string): void {
     const products = this.getProducts();
     const idx = products.findIndex((p) => p.id === id);
@@ -2433,6 +2443,43 @@ export const mockDb = {
 
     localStorage.setItem(STORAGE_KEYS.DISTRIBUTIONS, JSON.stringify(distributions));
     return dist;
+  },
+
+  reopenDistribution(distId: string): void {
+    const distributions = this.getDistributions();
+    const distIndex = distributions.findIndex(d => d.id === distId);
+    if (distIndex === -1) return;
+    
+    const dist = distributions[distIndex];
+    if (dist.status !== 'Confirmado') return;
+    
+    const movements = JSON.parse(localStorage.getItem(STORAGE_KEYS.MOVEMENTS) || '[]');
+    const products = this.getProducts();
+    
+    Object.entries(dist.items).forEach(([productId, dayData]) => {
+      const totalQty = Object.values(dayData).reduce((sum, val) => sum + (val || 0), 0);
+      if (totalQty > 0) {
+        const pIdx = products.findIndex(p => p.id === productId);
+        if (pIdx !== -1) {
+          products[pIdx].exits = Math.max(0, (products[pIdx].exits || 0) - totalQty);
+          products[pIdx].finalStock = (products[pIdx].initialStock || 0) + (products[pIdx].entries || 0) - products[pIdx].exits;
+        }
+      }
+    });
+    
+    const filteredMovements = movements.filter((m: any) => !(m.isDistribution && m.destination === dist.destination));
+    
+    dist.status = 'Pendente';
+    dist.confirmedAt = undefined;
+    distributions[distIndex] = dist;
+    
+    localStorage.setItem(STORAGE_KEYS.DISTRIBUTIONS, JSON.stringify(distributions));
+    localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(filteredMovements));
+    this.saveProducts(products);
+  },
+
+  resetAllDistributions(): void {
+    localStorage.setItem(STORAGE_KEYS.DISTRIBUTIONS, JSON.stringify([]));
   },
 
   // Audits
