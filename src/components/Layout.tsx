@@ -12,7 +12,9 @@ import {
   LogOut,
   Factory,
   Key,
-  CheckCircle2
+  CheckCircle2,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { dbService } from '../services/db';
 
@@ -29,6 +31,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   const [isMock, setIsMock] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isConfirmResetModalOpen, setIsConfirmResetModalOpen] = useState(false);
+  const [resetType, setResetType] = useState<'movements' | 'all' | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
@@ -259,6 +265,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                       <button 
                         onClick={() => {
                           setIsProfileOpen(false);
+                          setIsResetModalOpen(true);
+                        }}
+                        className="w-full flex items-center space-x-2.5 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors font-medium text-left"
+                      >
+                        <Trash2 size={14} className="text-rose-500" />
+                        <span>Gerenciar Dados</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setIsProfileOpen(false);
                           if (onLogout) onLogout();
                         }}
                         className="w-full flex items-center space-x-2.5 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/50 transition-colors font-bold text-left"
@@ -367,6 +383,141 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Data Reset Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">Gerenciamento de Dados</h3>
+                <p className="text-xs text-gray-500">Limpe os dados de teste ou zere os estoques para iniciar em produção.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {/* Opção 1: Limpar lançamentos e voltar ao estoque inicial */}
+              <button
+                type="button"
+                disabled={resetLoading}
+                onClick={() => {
+                  setResetType('movements');
+                  setIsConfirmResetModalOpen(true);
+                }}
+                className="w-full border border-gray-200 hover:border-accent-yellow p-4 rounded-xl text-left hover:bg-gray-50 transition-all flex items-start space-x-3 group active:scale-[0.99] disabled:opacity-50"
+              >
+                <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-accent-yellow group-hover:text-gray-900 transition-colors flex-shrink-0">
+                  <ArrowLeftRight size={18} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-xs font-bold text-gray-900">1. Limpar Lançamentos (Retornar ao Estoque Inicial)</h4>
+                  <p className="text-[11px] text-gray-500 mt-1 leading-normal">
+                    Apaga todas as movimentações, auditorias e distribuições registradas. Todos os produtos retornarão com o estoque inicial padrão configurado no sistema.
+                  </p>
+                </div>
+              </button>
+
+              {/* Opção 2: Reset Geral dos Estoques (Zerar tudo para lançar do zero) */}
+              <button
+                type="button"
+                disabled={resetLoading}
+                onClick={() => {
+                  setResetType('all');
+                  setIsConfirmResetModalOpen(true);
+                }}
+                className="w-full border border-gray-200 hover:border-rose-300 p-4 rounded-xl text-left hover:bg-rose-50/20 transition-all flex items-start space-x-3 group active:scale-[0.99] disabled:opacity-50"
+              >
+                <div className="p-2 bg-rose-50 text-rose-600 rounded-lg group-hover:bg-rose-500 group-hover:text-white transition-colors flex-shrink-0">
+                  <AlertTriangle size={18} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-xs font-bold text-rose-600">2. Reset Geral de Estoque (Zerar Tudo para Lançamento)</h4>
+                  <p className="text-[11px] text-gray-500 mt-1 leading-normal">
+                    Apaga todas as movimentações e define o saldo inicial e final de todos os produtos para <strong>zero (0)</strong>. Ideal para que o cliente possa lançar o estoque físico real dele do zero.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                disabled={resetLoading}
+                onClick={() => setIsResetModalOpen(false)}
+                className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmação Customizada de Reset */}
+      {isConfirmResetModalOpen && resetType && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-gray-100 p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center space-x-3 text-rose-600">
+              <AlertCircle size={24} className="flex-shrink-0" />
+              <h4 className="font-bold text-gray-900">Confirmar Reset</h4>
+            </div>
+            
+            {resetType === 'movements' ? (
+              <p className="text-sm text-gray-600">
+                Tem certeza de que deseja limpar todas as movimentações, auditorias e distribuições? Todos os produtos retornarão com o <strong>estoque inicial padrão</strong> configurado no sistema. Esta ação não poderá ser desfeita.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                <strong>ATENÇÃO MÁXIMA:</strong> Isso apagará todo o histórico e <strong>ZERARÁ os estoques iniciais e finais</strong> de todos os produtos do sistema. Esta ação não poderá ser desfeita. Deseja prosseguir com o reset geral?
+              </p>
+            )}
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                disabled={resetLoading}
+                onClick={() => { setIsConfirmResetModalOpen(false); setResetType(null); }}
+                className="px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={resetLoading}
+                onClick={async () => {
+                  setResetLoading(true);
+                  try {
+                    if (resetType === 'movements') {
+                      setToastMessage('Limpando lançamentos de teste...');
+                      await dbService.clearAllMovements();
+                      setToastMessage('Dados limpos! Voltando aos saldos iniciais.');
+                    } else {
+                      setToastMessage('Executando reset geral dos estoques...');
+                      await dbService.clearAllMovementsAndStocks();
+                      setToastMessage('Estoques zerados com sucesso!');
+                    }
+                    setIsConfirmResetModalOpen(false);
+                    setIsResetModalOpen(false);
+                    setResetType(null);
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 1500);
+                  } catch (err: any) {
+                    alert('Erro ao realizar a operação: ' + (err.message || err));
+                    setIsConfirmResetModalOpen(false);
+                    setResetType(null);
+                  } finally {
+                    setResetLoading(false);
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all disabled:opacity-50"
+              >
+                {resetLoading ? 'Processando...' : 'Confirmar Reset'}
+              </button>
+            </div>
           </div>
         </div>
       )}

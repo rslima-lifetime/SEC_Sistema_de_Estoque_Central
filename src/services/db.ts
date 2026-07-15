@@ -582,6 +582,128 @@ export const dbService = {
 
     const docRef = await addDoc(collection(firestoreDb, 'audits'), newAudit);
     return { id: docRef.id, ...newAudit } as AuditRecord;
+  },
+
+  async clearAllMovements(): Promise<void> {
+    cacheProducts = null;
+    cacheMovements = null;
+    cacheDistributions = null;
+    cacheAudits = null;
+    
+    if (useMock) {
+      localStorage.setItem('sec_movements', '[]');
+      localStorage.setItem('sec_distributions', '[]');
+      localStorage.setItem('sec_audits', '[]');
+      const products = mockDb.getProducts();
+      const updated = products.map(p => ({
+        ...p,
+        entries: 0,
+        exits: 0,
+        finalStock: p.initialStock
+      }));
+      mockDb.saveProducts(updated);
+      return;
+    }
+
+    // Firebase Firestore reset
+    // 1. Delete movements
+    const movementsSnapshot = await getDocs(collection(firestoreDb, 'movements'));
+    for (const docSnap of movementsSnapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'movements', docSnap.id));
+    }
+
+    // 2. Delete distributions
+    const distsSnapshot = await getDocs(collection(firestoreDb, 'distributions'));
+    for (const docSnap of distsSnapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'distributions', docSnap.id));
+    }
+
+    // 3. Delete audits
+    const auditsSnapshot = await getDocs(collection(firestoreDb, 'audits'));
+    for (const docSnap of auditsSnapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'audits', docSnap.id));
+    }
+
+    // 4. Reset products stock values
+    const productsSnapshot = await getDocs(collection(firestoreDb, 'products'));
+    for (const docSnap of productsSnapshot.docs) {
+      const data = docSnap.data();
+      await setDoc(doc(firestoreDb, 'products', docSnap.id), {
+        entries: 0,
+        exits: 0,
+        finalStock: data.initialStock || 0
+      }, { merge: true });
+    }
+  },
+
+  async clearAllMovementsAndStocks(): Promise<void> {
+    cacheProducts = null;
+    cacheMovements = null;
+    cacheDistributions = null;
+    cacheAudits = null;
+    
+    if (useMock) {
+      localStorage.setItem('sec_movements', '[]');
+      localStorage.setItem('sec_distributions', '[]');
+      localStorage.setItem('sec_audits', '[]');
+      const products = mockDb.getProducts();
+      const updated = products.map(p => ({
+        ...p,
+        initialStock: 0,
+        entries: 0,
+        exits: 0,
+        finalStock: 0
+      }));
+      mockDb.saveProducts(updated);
+      return;
+    }
+
+    // Firebase Firestore reset
+    // 1. Delete movements
+    const movementsSnapshot = await getDocs(collection(firestoreDb, 'movements'));
+    for (const docSnap of movementsSnapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'movements', docSnap.id));
+    }
+
+    // 2. Delete distributions
+    const distsSnapshot = await getDocs(collection(firestoreDb, 'distributions'));
+    for (const docSnap of distsSnapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'distributions', docSnap.id));
+    }
+
+    // 3. Delete audits
+    const auditsSnapshot = await getDocs(collection(firestoreDb, 'audits'));
+    for (const docSnap of auditsSnapshot.docs) {
+      await deleteDoc(doc(firestoreDb, 'audits', docSnap.id));
+    }
+
+    // 4. Reset products initial & final stock values to zero
+    const productsSnapshot = await getDocs(collection(firestoreDb, 'products'));
+    for (const docSnap of productsSnapshot.docs) {
+      await setDoc(doc(firestoreDb, 'products', docSnap.id), {
+        initialStock: 0,
+        entries: 0,
+        exits: 0,
+        finalStock: 0
+      }, { merge: true });
+    }
   }
 };
+
+if (typeof window !== 'undefined') {
+  (window as any).resetTestMovements = async () => {
+    if (confirm('Tem certeza de que deseja limpar todas as movimentações, auditorias e distribuições, resetando o saldo dos produtos?')) {
+      try {
+        console.log('Iniciando limpeza das movimentações de teste...');
+        await dbService.clearAllMovements();
+        console.log('Movimentações limpas com sucesso!');
+        location.reload();
+      } catch (err) {
+        console.error('Erro ao limpar dados:', err);
+        alert('Erro ao limpar dados: ' + err);
+      }
+    }
+  };
+}
+
 export type { Product, Movement, DistributionWeek, AuditRecord };
