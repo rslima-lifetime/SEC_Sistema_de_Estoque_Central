@@ -462,6 +462,18 @@ export const EstoqueCentral: React.FC = () => {
             </table>
           )}
         </div>
+        {/* Legend Footer */}
+        <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-end space-x-4 text-xs text-gray-500">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">Legenda (Saldo):</span>
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span>Estoque Baixo (≤ 50)</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span>Estoque Zerado</span>
+          </div>
+        </div>
       </div>
 
       {/* Modal: Novo Produto */}
