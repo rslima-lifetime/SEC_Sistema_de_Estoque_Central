@@ -193,6 +193,7 @@ export const dbService = {
       updatedFields.finalStock = initialStock + (existing.entries || 0) - (existing.exits || 0);
     }
     await setDoc(productRef, updatedFields, { merge: true });
+    cacheProducts = null;
     return { ...existing, ...updatedFields };
   },
 
