@@ -301,16 +301,31 @@ export const EstoqueCentral: React.FC = () => {
       {/* Tabela & Controles */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {/* Barra de Filtros e Ações */}
-        <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Pesquisar produto no estoque central..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
-            />
+        <div className="p-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Pesquisar produto no estoque central..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all"
+              />
+            </div>
+            
+            {/* Discreet Legend */}
+            <div className="flex items-center space-x-3.5 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 w-fit select-none">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-0.5">Legenda (Saldo):</span>
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>Estoque Baixo (≤ 50)</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span>Estoque Zerado</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">
@@ -461,18 +476,6 @@ export const EstoqueCentral: React.FC = () => {
               </tbody>
             </table>
           )}
-        </div>
-        {/* Legend Footer */}
-        <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-end space-x-4 text-xs text-gray-500">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">Legenda (Saldo):</span>
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
-            <span>Estoque Baixo (≤ 50)</span>
-          </div>
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-500" />
-            <span>Estoque Zerado</span>
-          </div>
         </div>
       </div>
 
