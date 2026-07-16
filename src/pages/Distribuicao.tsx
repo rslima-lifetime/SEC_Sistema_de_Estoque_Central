@@ -8,7 +8,8 @@ import {
   Truck,
   Lock,
   RotateCcw,
-  Unlock
+  Unlock,
+  Search
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import type { Product, DistributionWeek } from '../services/db';
@@ -39,6 +40,7 @@ export const Distribuicao: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [distributions, setDistributions] = useState<DistributionWeek[]>([]);
   const [activeDest, setActiveDest] = useState(DESTINATIONS[0]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -226,6 +228,10 @@ export const Distribuicao: React.FC = () => {
     return Object.values(days).reduce((sum, val) => sum + (val === '' ? 0 : (parseFloat(val.replace(',', '.')) || 0)), 0);
   };
 
+  const filteredProducts = products.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Toast */}
@@ -289,14 +295,27 @@ export const Distribuicao: React.FC = () => {
       {/* Painel Principal da Matriz */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {/* Header da Grade */}
-        <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-white rounded-lg border border-gray-200 text-gray-500">
-              <Truck size={18} />
+        <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white rounded-lg border border-gray-200 text-gray-500">
+                <Truck size={18} />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">Grade Semanal de Envio: {activeDest}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Preencha as quantidades programadas de entrega por dia.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-base">Grade Semanal de Envio: {activeDest}</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Preencha as quantidades programadas de entrega por dia.</p>
+
+            <div className="relative flex-1 max-w-xs sm:ml-4">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="Pesquisar item..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-1.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition-all bg-white"
+              />
             </div>
           </div>
 
@@ -346,6 +365,8 @@ export const Distribuicao: React.FC = () => {
             <div className="py-20 text-center text-gray-500 text-sm">Carregando matriz de distribuição...</div>
           ) : products.length === 0 ? (
             <div className="py-20 text-center text-gray-400 text-sm">Cadastre produtos no Estoque Central para liberar a distribuição.</div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="py-20 text-center text-gray-400 text-sm">Nenhum produto correspondente à busca.</div>
           ) : (
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
@@ -359,7 +380,7 @@ export const Distribuicao: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {products.map((p) => {
+                {filteredProducts.map((p) => {
                   const itemTotal = getProductTotal(p.id);
                   const isExceeded = itemTotal > p.finalStock;
 
